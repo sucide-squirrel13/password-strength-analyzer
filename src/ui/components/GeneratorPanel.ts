@@ -34,12 +34,14 @@ export class GeneratorPanel {
   private currentGenerated = '';
   private isRevealed = true;
   private copyFeedbackTimer: number | null = null;
+  private revealRafId: number | null = null;
 
   public constructor(callbacks: GeneratorPanelCallbacks) {
     this.root = createEl('section', {
       className: 'card',
       attrs: {
         id: 'generator-section',
+        tabindex: '-1',
         'aria-labelledby': 'generator-heading'
       }
     });
@@ -103,7 +105,10 @@ export class GeneratorPanel {
       attrs: { type: 'button' }
     });
 
-    this.outputBoxEl = createEl('div', { className: 'generated-output-box' });
+    this.outputBoxEl = createEl('div', {
+      className: 'generated-output-box',
+      attrs: { 'data-display-state': 'empty' }
+    });
     this.outputCodeEl = createEl('code', {
       className: 'generated-code is-empty',
       text: 'Click Generate to create a password using crypto.getRandomValues().'
@@ -267,8 +272,16 @@ export class GeneratorPanel {
     }, 1800);
   }
 
+  private cancelRevealRaf(): void {
+    if (this.revealRafId !== null) {
+      window.cancelAnimationFrame(this.revealRafId);
+      this.revealRafId = null;
+    }
+  }
+
   private setRevealed(revealed: boolean): void {
     this.isRevealed = revealed;
+    this.cancelRevealRaf();
     this.outputBoxEl.classList.remove('is-revealed');
 
     if (this.currentGenerated.length > 0) {
@@ -276,10 +289,16 @@ export class GeneratorPanel {
       this.outputCodeEl.textContent = revealed
         ? this.currentGenerated
         : '•••••••••••• (hidden)';
+      this.outputBoxEl.setAttribute('data-display-state', revealed ? 'revealed' : 'masked');
       if (revealed) {
-        void this.outputBoxEl.offsetWidth;
-        this.outputBoxEl.classList.add('is-revealed');
+        this.revealRafId = window.requestAnimationFrame(() => {
+          this.revealRafId = null;
+          if (!this.isRevealed || this.currentGenerated.length === 0) return;
+          this.outputBoxEl.classList.add('is-revealed');
+        });
       }
+    } else {
+      this.outputBoxEl.setAttribute('data-display-state', 'empty');
     }
 
     this.toggleBtn.textContent = revealed ? 'Hide' : 'Show';
@@ -340,8 +359,10 @@ export class GeneratorPanel {
   public reset(): void {
     this.currentGenerated = '';
     this.isRevealed = true;
+    this.cancelRevealRaf();
     this.clearCopyFeedback();
     this.outputBoxEl.classList.remove('is-revealed');
+    this.outputBoxEl.setAttribute('data-display-state', 'empty');
     this.outputCodeEl.classList.add('is-empty');
     this.outputCodeEl.textContent =
       'Click Generate to create a password using crypto.getRandomValues().';

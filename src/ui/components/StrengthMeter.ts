@@ -1,5 +1,14 @@
-import type { PasswordAnalysis } from '../../domain/types.ts';
+import type { PasswordAnalysis, StrengthTier } from '../../domain/types.ts';
 import { createEl } from '../dom.ts';
+
+const TIER_RANK: Readonly<Record<StrengthTier, number>> = {
+  empty: 0,
+  'very-weak': 1,
+  weak: 2,
+  fair: 3,
+  strong: 4,
+  'very-strong': 5
+};
 
 export class StrengthMeter {
   public readonly root: HTMLElement;
@@ -10,6 +19,8 @@ export class StrengthMeter {
   private readonly lengthValueEl: HTMLSpanElement;
   private readonly entropyValueEl: HTMLSpanElement;
   private readonly hintValueEl: HTMLSpanElement;
+  private previousTier: StrengthTier = 'empty';
+  private upgradeRafId: number | null = null;
 
   public constructor() {
     this.root = createEl('section', {
@@ -52,6 +63,18 @@ export class StrengthMeter {
     });
     this.trackEl.append(this.fillEl);
 
+    this.trackEl.addEventListener('animationend', (event: AnimationEvent) => {
+      if (event.target === this.trackEl) {
+        this.trackEl.classList.remove('is-upgraded');
+      }
+    });
+
+    this.badgeEl.addEventListener('animationend', (event: AnimationEvent) => {
+      if (event.target === this.badgeEl) {
+        this.badgeEl.classList.remove('is-tier-pop');
+      }
+    });
+
     const metaGrid = createEl('div', { className: 'meter-meta' });
 
     const lengthItem = createEl('div', { className: 'meta-item' });
@@ -77,11 +100,41 @@ export class StrengthMeter {
     this.root.append(heading, headerRow, this.trackEl, metaGrid);
   }
 
+  private cancelUpgradeRaf(): void {
+    if (this.upgradeRafId !== null) {
+      window.cancelAnimationFrame(this.upgradeRafId);
+      this.upgradeRafId = null;
+    }
+  }
+
   public update(analysis: PasswordAnalysis): void {
     const { scoring, metrics } = analysis;
+    const nextTier = scoring.tier;
+    const prevTier = this.previousTier;
+    const isTierChange = nextTier !== prevTier;
+    const isUpgrade = TIER_RANK[nextTier] > TIER_RANK[prevTier];
+    this.previousTier = nextTier;
+
     this.badgeEl.textContent = scoring.tierLabel;
-    this.badgeEl.setAttribute('data-tier', scoring.tier);
-    this.fillEl.setAttribute('data-tier', scoring.tier);
+    this.badgeEl.setAttribute('data-tier', nextTier);
+    this.fillEl.setAttribute('data-tier', nextTier);
+
+    if (isTierChange) {
+      this.cancelUpgradeRaf();
+      this.trackEl.classList.remove('is-upgraded');
+      this.badgeEl.classList.remove('is-tier-pop');
+
+      if (nextTier !== 'empty') {
+        this.upgradeRafId = window.requestAnimationFrame(() => {
+          this.upgradeRafId = null;
+          if (this.previousTier !== nextTier) return;
+          this.badgeEl.classList.add('is-tier-pop');
+          if (isUpgrade) {
+            this.trackEl.classList.add('is-upgraded');
+          }
+        });
+      }
+    }
 
     this.scoreEl.textContent = `${scoring.score} / 100`;
     this.trackEl.setAttribute('aria-valuenow', String(scoring.score));

@@ -4,6 +4,7 @@
 
   --bg-page: #f5f5f7;
   --bg-surface: #ffffff;
+  --bg-card-surface: rgba(255, 255, 255, 0.94);
   --bg-muted: #f2f2f6;
   --bg-hover: #e7e8ee;
 
@@ -55,18 +56,50 @@
   --radius-sm: 6px;
   --radius-md: 12px;
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-card-hover:
+    0 12px 28px -12px rgba(15, 23, 42, 0.14),
+    0 2px 6px rgba(15, 23, 42, 0.04);
+  --card-sheen-core: rgba(37, 99, 235, 0.36);
+  --card-sheen-edge: rgba(148, 163, 184, 0.2);
 
-  --ambient-orb-1-core: rgba(148, 163, 184, 0.16);
-  --ambient-orb-1-mid: rgba(59, 130, 246, 0.06);
-  --ambient-orb-2-core: rgba(191, 219, 254, 0.24);
-  --ambient-orb-2-mid: rgba(148, 163, 184, 0.08);
-  --ambient-orb-3-core: rgba(203, 213, 225, 0.2);
-  --ambient-orb-3-mid: rgba(147, 197, 253, 0.05);
+  --mesh-cobalt: rgba(59, 130, 246, 0.12);
+  --mesh-indigo: rgba(100, 116, 139, 0.14);
+  --mesh-cyan: rgba(14, 165, 233, 0.09);
+
+  --ambient-orb-1-core: rgba(96, 165, 250, 0.24);
+  --ambient-orb-1-mid: rgba(59, 130, 246, 0.08);
+  --ambient-orb-2-core: rgba(148, 163, 184, 0.26);
+  --ambient-orb-2-mid: rgba(148, 163, 184, 0.09);
+  --ambient-orb-3-core: rgba(125, 211, 252, 0.2);
+  --ambient-orb-3-mid: rgba(147, 197, 253, 0.07);
+  --ambient-orb-4-core: rgba(191, 219, 254, 0.26);
+  --ambient-orb-4-mid: rgba(148, 163, 184, 0.08);
+
+  --grid-line: rgba(71, 85, 105, 0.055);
+  --grid-major: rgba(37, 99, 235, 0.085);
+
+  --trail-core: rgba(37, 99, 235, 0.15);
+  --trail-halo: rgba(148, 163, 184, 0.06);
+
+  --particle-near: rgba(37, 99, 235, 0.24);
+  --particle-far: rgba(71, 85, 105, 0.18);
+
+  --pulse-core: rgba(59, 130, 246, 0.12);
+  --pulse-mid: rgba(148, 163, 184, 0.05);
+
+  --pointer-core: rgba(59, 130, 246, 0.12);
+  --pointer-mid: rgba(148, 163, 184, 0.045);
 
   --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, Inter, sans-serif;
   --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
   --tracking-display: -0.022em;
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-sine: cubic-bezier(0.37, 0, 0.63, 1);
+  --dur-micro: 140ms;
+  --dur-ui: 220ms;
+  --dur-panel: 280ms;
+  --dur-enter: 420ms;
 }
 
 :root[data-theme='dark'] {
@@ -74,6 +107,7 @@
 
   --bg-page: #0b0d11;
   --bg-surface: #14171f;
+  --bg-card-surface: rgba(20, 23, 31, 0.92);
   --bg-muted: #1c212c;
   --bg-hover: #252b38;
 
@@ -123,13 +157,39 @@
   --tier-very-strong-text: #5eead4;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-card-hover:
+    0 14px 34px -14px rgba(0, 0, 0, 0.72),
+    0 0 0 1px rgba(96, 165, 250, 0.2);
+  --card-sheen-core: rgba(147, 197, 253, 0.58);
+  --card-sheen-edge: rgba(37, 99, 235, 0.2);
 
-  --ambient-orb-1-core: rgba(37, 99, 235, 0.24);
-  --ambient-orb-1-mid: rgba(37, 99, 235, 0.09);
-  --ambient-orb-2-core: rgba(59, 130, 246, 0.18);
-  --ambient-orb-2-mid: rgba(29, 78, 216, 0.07);
-  --ambient-orb-3-core: rgba(14, 165, 233, 0.14);
-  --ambient-orb-3-mid: rgba(37, 99, 235, 0.05);
+  --mesh-cobalt: rgba(37, 99, 235, 0.3);
+  --mesh-indigo: rgba(59, 130, 246, 0.22);
+  --mesh-cyan: rgba(14, 165, 233, 0.2);
+
+  --ambient-orb-1-core: rgba(37, 99, 235, 0.36);
+  --ambient-orb-1-mid: rgba(37, 99, 235, 0.14);
+  --ambient-orb-2-core: rgba(14, 165, 233, 0.28);
+  --ambient-orb-2-mid: rgba(29, 78, 216, 0.11);
+  --ambient-orb-3-core: rgba(59, 130, 246, 0.26);
+  --ambient-orb-3-mid: rgba(37, 99, 235, 0.09);
+  --ambient-orb-4-core: rgba(56, 189, 248, 0.22);
+  --ambient-orb-4-mid: rgba(37, 99, 235, 0.08);
+
+  --grid-line: rgba(147, 197, 253, 0.065);
+  --grid-major: rgba(96, 165, 250, 0.13);
+
+  --trail-core: rgba(125, 211, 252, 0.28);
+  --trail-halo: rgba(37, 99, 235, 0.1);
+
+  --particle-near: rgba(186, 230, 253, 0.48);
+  --particle-far: rgba(96, 165, 250, 0.3);
+
+  --pulse-core: rgba(59, 130, 246, 0.24);
+  --pulse-mid: rgba(14, 165, 233, 0.09);
+
+  --pointer-core: rgba(96, 165, 250, 0.22);
+  --pointer-mid: rgba(14, 165, 233, 0.085);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -138,6 +198,7 @@
 
     --bg-page: #0b0d11;
     --bg-surface: #14171f;
+    --bg-card-surface: rgba(20, 23, 31, 0.92);
     --bg-muted: #1c212c;
     --bg-hover: #252b38;
 
@@ -187,12 +248,38 @@
     --tier-very-strong-text: #5eead4;
 
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-card-hover:
+      0 14px 34px -14px rgba(0, 0, 0, 0.72),
+      0 0 0 1px rgba(96, 165, 250, 0.2);
+    --card-sheen-core: rgba(147, 197, 253, 0.58);
+    --card-sheen-edge: rgba(37, 99, 235, 0.2);
 
-    --ambient-orb-1-core: rgba(37, 99, 235, 0.24);
-    --ambient-orb-1-mid: rgba(37, 99, 235, 0.09);
-    --ambient-orb-2-core: rgba(59, 130, 246, 0.18);
-    --ambient-orb-2-mid: rgba(29, 78, 216, 0.07);
-    --ambient-orb-3-core: rgba(14, 165, 233, 0.14);
-    --ambient-orb-3-mid: rgba(37, 99, 235, 0.05);
+    --mesh-cobalt: rgba(37, 99, 235, 0.3);
+    --mesh-indigo: rgba(59, 130, 246, 0.22);
+    --mesh-cyan: rgba(14, 165, 233, 0.2);
+
+    --ambient-orb-1-core: rgba(37, 99, 235, 0.36);
+    --ambient-orb-1-mid: rgba(37, 99, 235, 0.14);
+    --ambient-orb-2-core: rgba(14, 165, 233, 0.28);
+    --ambient-orb-2-mid: rgba(29, 78, 216, 0.11);
+    --ambient-orb-3-core: rgba(59, 130, 246, 0.26);
+    --ambient-orb-3-mid: rgba(37, 99, 235, 0.09);
+    --ambient-orb-4-core: rgba(56, 189, 248, 0.22);
+    --ambient-orb-4-mid: rgba(37, 99, 235, 0.08);
+
+    --grid-line: rgba(147, 197, 253, 0.065);
+    --grid-major: rgba(96, 165, 250, 0.13);
+
+    --trail-core: rgba(125, 211, 252, 0.28);
+    --trail-halo: rgba(37, 99, 235, 0.1);
+
+    --particle-near: rgba(186, 230, 253, 0.48);
+    --particle-far: rgba(96, 165, 250, 0.3);
+
+    --pulse-core: rgba(59, 130, 246, 0.24);
+    --pulse-mid: rgba(14, 165, 233, 0.09);
+
+    --pointer-core: rgba(96, 165, 250, 0.22);
+    --pointer-mid: rgba(14, 165, 233, 0.085);
   }
 }

@@ -7,6 +7,7 @@ import { GeneratorPanel } from './components/GeneratorPanel.ts';
 import { PasswordInputPanel } from './components/PasswordInputPanel.ts';
 import { PrivacyNotice } from './components/PrivacyNotice.ts';
 import { StrengthMeter } from './components/StrengthMeter.ts';
+import { AmbientPointerController } from './AmbientPointerController.ts';
 import {
   clearNode,
   createEl,
@@ -35,6 +36,8 @@ export class AppController {
   private readonly liveRegion: HTMLDivElement;
   private readonly themeToggleBtn: HTMLButtonElement;
   private readonly themeIconSlot: HTMLSpanElement;
+  private ambientPointerController: AmbientPointerController | null = null;
+  private navHighlightRafId: number | null = null;
 
   private currentPassword = '';
   private lastAnnouncedTier = '';
@@ -147,10 +150,16 @@ export class AppController {
       text: 'Analyzer',
       attrs: { href: '#analyzer-section' }
     });
+    analyzerLink.addEventListener('click', () => {
+      this.triggerNavHighlight(this.inputPanel.root);
+    });
     const generatorLink = createEl('a', {
       className: 'nav-link',
       text: 'Generator',
       attrs: { href: '#generator-section' }
+    });
+    generatorLink.addEventListener('click', () => {
+      this.triggerNavHighlight(this.generatorPanel.root);
     });
     const privacyLink = createEl('a', {
       className: 'nav-link',
@@ -159,6 +168,11 @@ export class AppController {
     });
     privacyLink.addEventListener('click', () => {
       this.privacyNotice.expand();
+      this.triggerNavHighlight(this.privacyNotice.root);
+    });
+
+    skipLink.addEventListener('click', () => {
+      this.triggerNavHighlight(this.inputPanel.root);
     });
 
     nav.append(analyzerLink, generatorLink, privacyLink);
@@ -186,14 +200,69 @@ export class AppController {
       className: 'ambient-bg',
       attrs: { 'aria-hidden': 'true' }
     });
+
+    const mesh = createEl('div', { className: 'ambient-mesh' });
+
+    const gridMask = createEl('div', { className: 'ambient-grid-mask' });
+    gridMask.append(createEl('div', { className: 'ambient-grid' }));
+
+    const trails = createEl('div', { className: 'ambient-trails' });
+    trails.append(
+      createEl('span', { className: 'ambient-trail ambient-trail-1' }),
+      createEl('span', { className: 'ambient-trail ambient-trail-2' }),
+      createEl('span', { className: 'ambient-trail ambient-trail-3' })
+    );
+
+    const particlesFar = createEl('div', { className: 'ambient-particles-far' });
+    const particlesNear = createEl('div', { className: 'ambient-particles-near' });
+
+    const pulses = createEl('div', { className: 'ambient-pulses' });
+    pulses.append(
+      createEl('span', { className: 'ambient-pulse ambient-pulse-1' }),
+      createEl('span', { className: 'ambient-pulse ambient-pulse-2' })
+    );
+
+    const pointerGlow = createEl('span', { className: 'ambient-pointer' });
+
     ambientBg.append(
+      mesh,
       createEl('span', { className: 'ambient-orb ambient-orb-1' }),
       createEl('span', { className: 'ambient-orb ambient-orb-2' }),
-      createEl('span', { className: 'ambient-orb ambient-orb-3' })
+      createEl('span', { className: 'ambient-orb ambient-orb-3' }),
+      createEl('span', { className: 'ambient-orb ambient-orb-4' }),
+      gridMask,
+      trails,
+      particlesFar,
+      particlesNear,
+      pulses,
+      pointerGlow
     );
+
+    this.ambientPointerController?.destroy();
+    this.ambientPointerController = new AmbientPointerController(pointerGlow);
+
+    for (const card of [this.inputPanel.root, this.generatorPanel.root, this.privacyNotice.root]) {
+      card.addEventListener('animationend', (event: AnimationEvent) => {
+        if (event.target === card) {
+          card.classList.remove('is-nav-highlighted');
+        }
+      });
+    }
 
     shell.append(skipLink, this.liveRegion, header, main);
     this.container.append(ambientBg, shell);
+  }
+
+  private triggerNavHighlight(cardEl: HTMLElement): void {
+    if (this.navHighlightRafId !== null) {
+      window.cancelAnimationFrame(this.navHighlightRafId);
+      this.navHighlightRafId = null;
+    }
+    cardEl.classList.remove('is-nav-highlighted');
+    this.navHighlightRafId = window.requestAnimationFrame(() => {
+      this.navHighlightRafId = null;
+      cardEl.classList.add('is-nav-highlighted');
+    });
   }
 
   private bindEvents(): void {
@@ -212,6 +281,12 @@ export class AppController {
     });
 
     window.addEventListener('pagehide', () => {
+      if (this.navHighlightRafId !== null) {
+        window.cancelAnimationFrame(this.navHighlightRafId);
+        this.navHighlightRafId = null;
+      }
+      this.ambientPointerController?.destroy();
+      this.ambientPointerController = null;
       this.resetAll(false);
       this.themeManager.destroy();
     });

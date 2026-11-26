@@ -1,15 +1,26 @@
 import { createChevronIcon, createEl } from '../dom.ts';
 
+function isReducedMotion(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+}
+
 export class PrivacyNotice {
   public readonly root: HTMLElement;
   private readonly toggleBtn: HTMLButtonElement;
   private readonly contentEl: HTMLDivElement;
+  private isExpanded = false;
+  private expandRafId: number | null = null;
 
   public constructor() {
     this.root = createEl('section', {
       className: 'card privacy-card',
       attrs: {
         id: 'privacy-section',
+        tabindex: '-1',
         'aria-labelledby': 'privacy-heading'
       }
     });
@@ -39,9 +50,15 @@ export class PrivacyNotice {
 
     this.contentEl = createEl('div', {
       className: 'privacy-content',
-      attrs: { id: 'privacy-content', hidden: 'true' }
+      attrs: {
+        id: 'privacy-content',
+        'data-expanded': 'false',
+        'aria-hidden': 'true',
+        inert: ''
+      }
     });
 
+    const inner = createEl('div', { className: 'privacy-content-inner' });
     const list = createEl('ul', { className: 'privacy-list' });
     const items = [
       'Local-only processing: All strength checks and password generation run strictly inside your browser memory using the Web Crypto API. Zero network requests are made (enforced via Content Security Policy connect-src \'none\').',
@@ -55,25 +72,50 @@ export class PrivacyNotice {
       list.append(createEl('li', { text }));
     }
 
-    this.contentEl.append(list);
+    inner.append(list);
+    this.contentEl.append(inner);
     this.root.append(heading, this.contentEl);
 
     this.toggleBtn.addEventListener('click', () => {
-      const expanded = this.toggleBtn.getAttribute('aria-expanded') === 'true';
-      this.setExpanded(!expanded);
+      this.setExpanded(!this.isExpanded);
     });
   }
 
+  private cancelExpandRaf(): void {
+    if (this.expandRafId !== null) {
+      window.cancelAnimationFrame(this.expandRafId);
+      this.expandRafId = null;
+    }
+  }
+
   private setExpanded(expanded: boolean): void {
+    if (this.isExpanded === expanded) return;
+    this.isExpanded = expanded;
+    this.cancelExpandRaf();
     this.toggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+
     if (expanded) {
-      this.contentEl.removeAttribute('hidden');
+      this.contentEl.removeAttribute('inert');
+      this.contentEl.setAttribute('aria-hidden', 'false');
+      if (isReducedMotion()) {
+        this.contentEl.setAttribute('data-expanded', 'true');
+      } else {
+        this.expandRafId = window.requestAnimationFrame(() => {
+          this.expandRafId = null;
+          if (!this.isExpanded) return;
+          this.contentEl.setAttribute('data-expanded', 'true');
+        });
+      }
     } else {
-      this.contentEl.setAttribute('hidden', 'true');
+      this.contentEl.setAttribute('inert', '');
+      this.contentEl.setAttribute('aria-hidden', 'true');
+      this.contentEl.setAttribute('data-expanded', 'false');
     }
   }
 
   public expand(): void {
-    this.setExpanded(true);
+    if (!this.isExpanded) {
+      this.setExpanded(true);
+    }
   }
 }
