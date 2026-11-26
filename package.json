@@ -11,7 +11,12 @@
     "test": "node --test tests/domain/*.test.ts"
   },
   "devDependencies": {
+    "@types/hls.js": "^0.13.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.8"
+  },
+  "dependencies": {
+    "hls.js": "^1.7.4",
+    "lucide": "^1.80.0"
   }
 }
