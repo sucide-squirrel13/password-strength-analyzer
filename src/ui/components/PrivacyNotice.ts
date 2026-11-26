@@ -42,7 +42,7 @@ export class PrivacyNotice {
     const titleText = createEl('span', { text: 'Privacy & Limitations' });
     const meta = createEl('span', { className: 'privacy-toggle-meta' });
     meta.append(
-      createEl('span', { className: 'privacy-cue', text: 'Local-only · 5 notes' }),
+      createEl('span', { className: 'privacy-cue', text: 'Local analysis · 5 notes' }),
       createChevronIcon()
     );
     this.toggleBtn.append(titleText, meta);
@@ -61,7 +61,7 @@ export class PrivacyNotice {
     const inner = createEl('div', { className: 'privacy-content-inner' });
     const list = createEl('ul', { className: 'privacy-list' });
     const items = [
-      'Local-only processing: All strength checks and password generation run strictly inside your browser memory using the Web Crypto API. Zero network requests are made (enforced via Content Security Policy connect-src \'none\').',
+      'Local-only password evaluation: All strength checks and password generation run strictly inside your browser memory using the Web Crypto API. Application fetch/XHR requests remain blocked via Content Security Policy (connect-src \'none\'); only the decorative background video is streamed over media-src from d8j0ntlcm91z4.cloudfront.net with no-referrer policy and zero password data.',
       'Zero persistence or logging: Passwords and theme preferences are never saved to localStorage, sessionStorage, cookies, IndexedDB, URL parameters, or console logs.',
       'Offline common-password limitations: Pattern checks compare input against a small bundled offline list of common passwords and simple substitutions. This cannot detect newly leaked credentials, organization-specific terms, personal names, or check live data-breach databases (such as Have I Been Pwned).',
       'No global uniqueness guarantee: Local analysis cannot determine whether a password has been used elsewhere or exposed in an external breach. Strength scores and crack-time estimates are heuristic guides, not guarantees.',

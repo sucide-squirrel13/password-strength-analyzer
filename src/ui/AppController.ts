@@ -8,6 +8,7 @@ import { PasswordInputPanel } from './components/PasswordInputPanel.ts';
 import { PrivacyNotice } from './components/PrivacyNotice.ts';
 import { StrengthMeter } from './components/StrengthMeter.ts';
 import { AmbientPointerController } from './AmbientPointerController.ts';
+import { AmbientVideoController } from './AmbientVideoController.ts';
 import {
   clearNode,
   createEl,
@@ -37,6 +38,7 @@ export class AppController {
   private readonly themeToggleBtn: HTMLButtonElement;
   private readonly themeIconSlot: HTMLSpanElement;
   private ambientPointerController: AmbientPointerController | null = null;
+  private ambientVideoController: AmbientVideoController | null = null;
   private navHighlightRafId: number | null = null;
 
   private currentPassword = '';
@@ -123,7 +125,7 @@ export class AppController {
     const privacyPill = createEl('span', { className: 'privacy-pill' });
     privacyPill.append(
       createShieldIcon(),
-      createEl('span', { text: 'Offline · Memory-only' })
+      createEl('span', { text: 'Local analysis · Memory-only' })
     );
 
     titleRow.append(
@@ -203,6 +205,28 @@ export class AppController {
 
     const mesh = createEl('div', { className: 'ambient-mesh' });
 
+    const videoLayer = createEl('div', {
+      className: 'ambient-video-layer',
+      attrs: { 'data-video-state': 'idle' }
+    });
+    const bgVideo = createEl('video', {
+      className: 'ambient-video',
+      attrs: {
+        autoplay: '',
+        loop: '',
+        muted: '',
+        playsinline: '',
+        preload: 'metadata',
+        tabindex: '-1',
+        'aria-hidden': 'true'
+      }
+    });
+    const fadeTop = createEl('div', { className: 'ambient-video-fade ambient-video-fade-top' });
+    const fadeBottom = createEl('div', {
+      className: 'ambient-video-fade ambient-video-fade-bottom'
+    });
+    videoLayer.append(bgVideo, fadeTop, fadeBottom);
+
     const gridMask = createEl('div', { className: 'ambient-grid-mask' });
     gridMask.append(createEl('div', { className: 'ambient-grid' }));
 
@@ -226,6 +250,7 @@ export class AppController {
 
     ambientBg.append(
       mesh,
+      videoLayer,
       createEl('span', { className: 'ambient-orb ambient-orb-1' }),
       createEl('span', { className: 'ambient-orb ambient-orb-2' }),
       createEl('span', { className: 'ambient-orb ambient-orb-3' }),
@@ -240,6 +265,8 @@ export class AppController {
 
     this.ambientPointerController?.destroy();
     this.ambientPointerController = new AmbientPointerController(pointerGlow);
+    this.ambientVideoController?.destroy();
+    this.ambientVideoController = new AmbientVideoController(videoLayer, bgVideo);
 
     for (const card of [this.inputPanel.root, this.generatorPanel.root, this.privacyNotice.root]) {
       card.addEventListener('animationend', (event: AnimationEvent) => {
@@ -287,6 +314,8 @@ export class AppController {
       }
       this.ambientPointerController?.destroy();
       this.ambientPointerController = null;
+      this.ambientVideoController?.destroy();
+      this.ambientVideoController = null;
       this.resetAll(false);
       this.themeManager.destroy();
     });
