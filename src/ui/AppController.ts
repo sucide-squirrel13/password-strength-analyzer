@@ -1,12 +1,19 @@
 import { analyzePassword } from '../domain/analyzer.ts';
 import type { PasswordAnalysis } from '../domain/types.ts';
+import type { ThemeManager, ThemeMode } from './ThemeManager.ts';
 import { CriteriaChecklist } from './components/CriteriaChecklist.ts';
 import { FindingsAndTips } from './components/FindingsAndTips.ts';
 import { GeneratorPanel } from './components/GeneratorPanel.ts';
 import { PasswordInputPanel } from './components/PasswordInputPanel.ts';
 import { PrivacyNotice } from './components/PrivacyNotice.ts';
 import { StrengthMeter } from './components/StrengthMeter.ts';
-import { clearNode, createEl } from './dom.ts';
+import {
+  clearNode,
+  createEl,
+  createMoonIcon,
+  createShieldIcon,
+  createSunIcon
+} from './dom.ts';
 
 function hasClipboardWrite(): boolean {
   return (
@@ -18,6 +25,7 @@ function hasClipboardWrite(): boolean {
 
 export class AppController {
   private readonly container: HTMLElement;
+  private readonly themeManager: ThemeManager;
   private readonly inputPanel: PasswordInputPanel;
   private readonly strengthMeter: StrengthMeter;
   private readonly criteriaChecklist: CriteriaChecklist;
@@ -25,13 +33,16 @@ export class AppController {
   private readonly generatorPanel: GeneratorPanel;
   private readonly privacyNotice: PrivacyNotice;
   private readonly liveRegion: HTMLDivElement;
+  private readonly themeToggleBtn: HTMLButtonElement;
+  private readonly themeIconSlot: HTMLSpanElement;
 
   private currentPassword = '';
   private lastAnnouncedTier = '';
   private announceTimer: number | null = null;
 
-  public constructor(container: HTMLElement) {
+  public constructor(container: HTMLElement, themeManager: ThemeManager) {
     this.container = container;
+    this.themeManager = themeManager;
 
     this.liveRegion = createEl('div', {
       className: 'sr-only',
@@ -41,6 +52,19 @@ export class AppController {
         'aria-atomic': 'true'
       }
     });
+
+    this.themeToggleBtn = createEl('button', {
+      className: 'theme-toggle',
+      attrs: {
+        type: 'button',
+        'aria-pressed': 'false'
+      }
+    });
+    this.themeIconSlot = createEl('span', { className: 'theme-icon-slot' });
+    this.themeToggleBtn.append(
+      this.themeIconSlot,
+      createEl('span', { text: 'Dark mode' })
+    );
 
     this.inputPanel = new PasswordInputPanel({
       onInput: (val) => this.handlePasswordChange(val, true),
@@ -60,7 +84,7 @@ export class AppController {
       onUsePassword: (generated) => {
         this.inputPanel.setValue(generated);
         const analysis = this.handlePasswordChange(generated, false);
-        this.inputPanel.setStatus('Generated password loaded into analyzer.');
+        this.inputPanel.setStatus('Generated password loaded into analyzer.', 'success');
         this.announceNow(`Loaded into analyzer. Strength: ${analysis.scoring.tierLabel}`);
       },
       onCopyPassword: (generated) => {
@@ -70,8 +94,11 @@ export class AppController {
     });
     this.privacyNotice = new PrivacyNotice();
 
+    this.themeManager.setOnChange((theme) => this.syncThemeToggle(theme));
+    this.syncThemeToggle(this.themeManager.getTheme());
+
     this.mount();
-    this.bindLifecycleHygiene();
+    this.bindEvents();
     this.renderAnalysis(analyzePassword(''), false);
   }
 
@@ -80,37 +107,103 @@ export class AppController {
 
     const shell = createEl('div', { className: 'app-shell' });
 
+    const skipLink = createEl('a', {
+      className: 'skip-link',
+      text: 'Skip to analyzer',
+      attrs: { href: '#analyzer-section' }
+    });
+
     const header = createEl('header', { className: 'app-header' });
-    header.append(
+    const brand = createEl('div', { className: 'header-brand' });
+    const titleRow = createEl('div', { className: 'header-title-row' });
+
+    const privacyPill = createEl('span', { className: 'privacy-pill' });
+    privacyPill.append(
+      createShieldIcon(),
+      createEl('span', { text: 'Offline · Memory-only' })
+    );
+
+    titleRow.append(
       createEl('h1', { className: 'app-title', text: 'Password Strength Analyzer' }),
+      privacyPill
+    );
+
+    brand.append(
+      titleRow,
       createEl('p', {
         className: 'app-subtitle',
-        text: 'Offline client-side password evaluation and Web Crypto generator.'
+        text: 'Client-side password evaluation and Web Crypto generator.'
       })
     );
+
+    const actions = createEl('div', { className: 'header-actions' });
+    const nav = createEl('nav', {
+      className: 'header-nav',
+      attrs: { 'aria-label': 'Section navigation' }
+    });
+
+    const analyzerLink = createEl('a', {
+      className: 'nav-link',
+      text: 'Analyzer',
+      attrs: { href: '#analyzer-section' }
+    });
+    const generatorLink = createEl('a', {
+      className: 'nav-link',
+      text: 'Generator',
+      attrs: { href: '#generator-section' }
+    });
+    const privacyLink = createEl('a', {
+      className: 'nav-link',
+      text: 'Privacy',
+      attrs: { href: '#privacy-section' }
+    });
+    privacyLink.addEventListener('click', () => {
+      this.privacyNotice.expand();
+    });
+
+    nav.append(analyzerLink, generatorLink, privacyLink);
+    actions.append(nav, this.themeToggleBtn);
+    header.append(brand, actions);
 
     const main = createEl('main');
     const grid = createEl('div', { className: 'workspace-grid' });
 
-    const leftCol = createEl('div', { className: 'column-stack' });
-    leftCol.append(
+    const primaryCol = createEl('div', { className: 'column-primary' });
+    primaryCol.append(
       this.inputPanel.root,
       this.strengthMeter.root,
       this.criteriaChecklist.root,
       this.findingsAndTips.root
     );
 
-    const rightCol = createEl('div', { className: 'column-stack' });
-    rightCol.append(this.generatorPanel.root);
+    const secondaryCol = createEl('div', { className: 'column-secondary' });
+    secondaryCol.append(this.generatorPanel.root, this.privacyNotice.root);
 
-    grid.append(leftCol, rightCol);
-    main.append(grid, this.privacyNotice.root);
+    grid.append(primaryCol, secondaryCol);
+    main.append(grid);
 
-    shell.append(this.liveRegion, header, main);
-    this.container.append(shell);
+    const ambientBg = createEl('div', {
+      className: 'ambient-bg',
+      attrs: { 'aria-hidden': 'true' }
+    });
+    ambientBg.append(
+      createEl('span', { className: 'ambient-orb ambient-orb-1' }),
+      createEl('span', { className: 'ambient-orb ambient-orb-2' }),
+      createEl('span', { className: 'ambient-orb ambient-orb-3' })
+    );
+
+    shell.append(skipLink, this.liveRegion, header, main);
+    this.container.append(ambientBg, shell);
   }
 
-  private bindLifecycleHygiene(): void {
+  private bindEvents(): void {
+    this.themeToggleBtn.addEventListener('click', () => {
+      const nextTheme = this.themeManager.toggle();
+      this.announceNow(
+        nextTheme === 'dark' ? 'Dark theme enabled' : 'Light theme enabled'
+      );
+    });
+
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') {
         this.inputPanel.hideSecret();
@@ -120,7 +213,14 @@ export class AppController {
 
     window.addEventListener('pagehide', () => {
       this.resetAll(false);
+      this.themeManager.destroy();
     });
+  }
+
+  private syncThemeToggle(theme: ThemeMode): void {
+    const isDark = theme === 'dark';
+    this.themeToggleBtn.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+    this.themeIconSlot.replaceChildren(isDark ? createSunIcon() : createMoonIcon());
   }
 
   private handlePasswordChange(value: string, announceTier: boolean): PasswordAnalysis {
@@ -174,43 +274,54 @@ export class AppController {
   ): Promise<void> {
     if (secret.length === 0) return;
 
-    const setTargetStatus = (msg: string): void => {
+    const setTargetStatus = (msg: string, state: 'success' | 'error'): void => {
       if (target === 'input') {
-        this.inputPanel.setStatus(msg);
+        this.inputPanel.setStatus(msg, state);
       } else {
-        this.generatorPanel.setStatus(msg);
+        this.generatorPanel.setStatus(msg, state);
       }
     };
 
     if (!hasClipboardWrite()) {
-      setTargetStatus('Clipboard API unavailable in this context. Copy manually.');
+      setTargetStatus('Clipboard API unavailable in this context. Copy manually.', 'error');
       this.announceNow('Clipboard unavailable');
       return;
     }
 
     try {
       await navigator.clipboard.writeText(secret);
-      setTargetStatus('Copied to clipboard. Remember to clear clipboard when finished.');
+      if (target === 'input') {
+        this.inputPanel.markCopied();
+      } else {
+        this.generatorPanel.markCopied();
+      }
+      setTargetStatus('Copied to clipboard. Remember to clear clipboard when finished.', 'success');
       this.announceNow('Password copied to clipboard');
     } catch {
-      setTargetStatus('Clipboard permission denied or unavailable. Copy manually.');
+      setTargetStatus('Clipboard permission denied or unavailable. Copy manually.', 'error');
       this.announceNow('Clipboard permission denied');
     }
   }
 
   private async clearClipboard(): Promise<void> {
     if (!hasClipboardWrite()) {
-      this.inputPanel.setStatus('Clipboard API unavailable; clear clipboard manually.');
+      this.inputPanel.setStatus(
+        'Clipboard API unavailable; clear clipboard manually.',
+        'error'
+      );
       this.announceNow('Clipboard unavailable');
       return;
     }
 
     try {
       await navigator.clipboard.writeText('');
-      this.inputPanel.setStatus('Clipboard cleared.');
+      this.inputPanel.setStatus('Clipboard cleared.', 'success');
       this.announceNow('Clipboard cleared');
     } catch {
-      this.inputPanel.setStatus('Unable to clear clipboard automatically (permission required).');
+      this.inputPanel.setStatus(
+        'Unable to clear clipboard automatically (permission required).',
+        'error'
+      );
       this.announceNow('Clipboard permission denied');
     }
   }

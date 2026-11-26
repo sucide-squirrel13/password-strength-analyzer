@@ -24,6 +24,8 @@ npm run preview    # Preview built dist/ on 127.0.0.1 with security headers
 ## Security & Privacy Measures
 
 - **Local-only execution:** Enforced at browser level via `<meta http-equiv="Content-Security-Policy" ... connect-src 'none' ...>` in production builds and `Referrer-Policy: no-referrer`.
+- **In-memory light/dark theming:** Respects `prefers-color-scheme` and provides an accessible header toggle kept strictly in memory (zero `localStorage`, `sessionStorage`, or cookies).
+- **Safe DOM & SVG rendering:** Uses `createElement`, `createElementNS`, `textContent`, and `replaceChildren()` exclusively (zero `innerHTML`, zero inline `style`).
 - **Zero persistence or logging:** No `localStorage`, `sessionStorage`, `cookies`, `IndexedDB`, URL parameter mutations, or `console.*` logging of user input.
 - **No secret leakage:** Pattern warnings never echo password substrings, offsets, or masked characters; `aria-live` announces only high-level tiers/status.
 - **Unbiased CSPRNG:** Uses `crypto.getRandomValues` with rejection sampling (`Uint32Array`) and Fisher-Yates shuffling; fails closed if Web Crypto is unavailable.

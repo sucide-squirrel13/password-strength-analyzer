@@ -2,6 +2,7 @@ import { generatePassword, validateGeneratorOptions } from '../../domain/generat
 import { MAX_GENERATED_LENGTH } from '../../domain/types.ts';
 import type { GeneratorOptions } from '../../domain/types.ts';
 import { createEl } from '../dom.ts';
+import type { StatusState } from './PasswordInputPanel.ts';
 
 const MIN_UI_GENERATED_LENGTH = 8;
 
@@ -22,6 +23,7 @@ export class GeneratorPanel {
   private readonly ambiguousCb: HTMLInputElement;
   private readonly validationEl: HTMLParagraphElement;
   private readonly generateBtn: HTMLButtonElement;
+  private readonly outputBoxEl: HTMLDivElement;
   private readonly outputCodeEl: HTMLElement;
   private readonly poolHintEl: HTMLParagraphElement;
   private readonly toggleBtn: HTMLButtonElement;
@@ -31,11 +33,15 @@ export class GeneratorPanel {
   private readonly statusEl: HTMLParagraphElement;
   private currentGenerated = '';
   private isRevealed = true;
+  private copyFeedbackTimer: number | null = null;
 
   public constructor(callbacks: GeneratorPanelCallbacks) {
     this.root = createEl('section', {
       className: 'card',
-      attrs: { 'aria-labelledby': 'generator-heading' }
+      attrs: {
+        id: 'generator-section',
+        'aria-labelledby': 'generator-heading'
+      }
     });
 
     const heading = createEl('h2', {
@@ -88,7 +94,7 @@ export class GeneratorPanel {
 
     this.validationEl = createEl('p', {
       className: 'validation-error',
-      attrs: { hidden: 'true', role: 'alert', 'aria-live': 'polite' }
+      attrs: { hidden: 'true', role: 'alert' }
     });
 
     this.generateBtn = createEl('button', {
@@ -97,12 +103,12 @@ export class GeneratorPanel {
       attrs: { type: 'button' }
     });
 
-    const outputBox = createEl('div', { className: 'generated-output-box' });
+    this.outputBoxEl = createEl('div', { className: 'generated-output-box' });
     this.outputCodeEl = createEl('code', {
-      className: 'generated-code',
+      className: 'generated-code is-empty',
       text: 'Click Generate to create a password using crypto.getRandomValues().'
     });
-    outputBox.append(this.outputCodeEl);
+    this.outputBoxEl.append(this.outputCodeEl);
 
     this.poolHintEl = createEl('p', { className: 'hint-line' });
 
@@ -135,7 +141,10 @@ export class GeneratorPanel {
     const actions = createEl('div', { className: 'button-group' });
     actions.append(this.toggleBtn, this.copyBtn, this.useBtn, this.clearBtn);
 
-    this.statusEl = createEl('p', { className: 'status-line' });
+    this.statusEl = createEl('p', {
+      className: 'status-line',
+      attrs: { 'data-state': 'neutral' }
+    });
 
     this.root.append(
       heading,
@@ -144,7 +153,7 @@ export class GeneratorPanel {
       checkboxGrid,
       this.validationEl,
       this.generateBtn,
-      outputBox,
+      this.outputBoxEl,
       this.poolHintEl,
       actions,
       this.statusEl
@@ -174,6 +183,7 @@ export class GeneratorPanel {
     this.generateBtn.addEventListener('click', () => {
       if (!this.validateCurrentOptions()) return;
       try {
+        this.clearCopyFeedback();
         const result = generatePassword(this.readOptions());
         this.currentGenerated = result.password;
         this.setRevealed(true);
@@ -182,7 +192,7 @@ export class GeneratorPanel {
         this.copyBtn.disabled = false;
         this.useBtn.disabled = false;
         this.clearBtn.disabled = false;
-        this.statusEl.textContent = 'New password generated locally.';
+        this.setStatus('New password generated locally.', 'success');
         callbacks.onGeneratedAnnouncement('Generated new password');
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unable to generate password.';
@@ -237,13 +247,41 @@ export class GeneratorPanel {
     return cb;
   }
 
+  private clearCopyFeedback(): void {
+    if (this.copyFeedbackTimer !== null) {
+      window.clearTimeout(this.copyFeedbackTimer);
+      this.copyFeedbackTimer = null;
+    }
+    this.copyBtn.removeAttribute('data-copied');
+    this.copyBtn.textContent = 'Copy';
+  }
+
+  public markCopied(): void {
+    this.clearCopyFeedback();
+    this.copyBtn.setAttribute('data-copied', 'true');
+    this.copyBtn.textContent = 'Copied';
+    this.copyFeedbackTimer = window.setTimeout(() => {
+      this.copyFeedbackTimer = null;
+      this.copyBtn.removeAttribute('data-copied');
+      this.copyBtn.textContent = 'Copy';
+    }, 1800);
+  }
+
   private setRevealed(revealed: boolean): void {
     this.isRevealed = revealed;
+    this.outputBoxEl.classList.remove('is-revealed');
+
     if (this.currentGenerated.length > 0) {
+      this.outputCodeEl.classList.remove('is-empty');
       this.outputCodeEl.textContent = revealed
         ? this.currentGenerated
         : '•••••••••••• (hidden)';
+      if (revealed) {
+        void this.outputBoxEl.offsetWidth;
+        this.outputBoxEl.classList.add('is-revealed');
+      }
     }
+
     this.toggleBtn.textContent = revealed ? 'Hide' : 'Show';
     this.toggleBtn.setAttribute('aria-pressed', revealed ? 'true' : 'false');
     this.toggleBtn.setAttribute(
@@ -294,13 +332,17 @@ export class GeneratorPanel {
     }
   }
 
-  public setStatus(message: string): void {
+  public setStatus(message: string, state: StatusState = 'neutral'): void {
     this.statusEl.textContent = message;
+    this.statusEl.setAttribute('data-state', state);
   }
 
   public reset(): void {
     this.currentGenerated = '';
     this.isRevealed = true;
+    this.clearCopyFeedback();
+    this.outputBoxEl.classList.remove('is-revealed');
+    this.outputCodeEl.classList.add('is-empty');
     this.outputCodeEl.textContent =
       'Click Generate to create a password using crypto.getRandomValues().';
     this.toggleBtn.disabled = true;
@@ -311,6 +353,7 @@ export class GeneratorPanel {
     this.useBtn.disabled = true;
     this.clearBtn.disabled = true;
     this.statusEl.textContent = '';
+    this.statusEl.setAttribute('data-state', 'neutral');
     this.validateCurrentOptions();
   }
 }
